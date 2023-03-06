@@ -1,0 +1,28 @@
+WITH category_salad     AS (
+    SELECT category_id
+    FROM `ygy-datawarehouse.edw.mst_category`
+    WHERE category_nm = '샐러드'
+), vendor_salad         AS (
+    SELECT category_id, vendor_id
+    FROM `ygy-datawarehouse.edw.lst_vendor_category`
+), order_salad          AS (
+    SELECT vendor_id
+          , order_id
+          , order_dt
+    FROM `ygy-datawarehouse.edw.lst_order`
+    WHERE 1=1
+          AND DATE(order_dt) BETWEEN '2021-01-01' AND '2022-12-31'
+          AND test_order_yn is false
+          AND order_result_cd ='success'
+)
+
+SELECT FORMAT_DATETIME('%Y_%m', order_dt)                AS year_month
+      , count(distinct order_id)                         AS num_of_order
+FROM category_salad 
+LEFT JOIN vendor_salad
+USING (category_id)
+LEFT JOIN order_salad
+USING (vendor_id)
+WHERE FORMAT_DATETIME('%Y-%m', order_dt) is not null
+GROUP BY 1
+ORDER BY 1;
