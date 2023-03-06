@@ -1,0 +1,42 @@
+WITH product_drink           AS (
+    SELECT product_section_id
+          , CASE 
+                WHEN liquor_yn is TRUE THEN 1
+            ELSE 0
+            END AS whether_liquor
+    FROM `ygy-datawarehouse.edw.mst_product_section`
+)
+, order_drink               AS (
+    SELECT product_section_id
+          , order_no
+    FROM `ygy-datawarehouse.edw.lst_order_product`
+    WHERE 1=1
+        AND product_section_id != 0
+        AND product_section_id is not NULL
+        AND DATE(order_dt) BETWEEN '2021-01-01' AND '2022-12-31'
+)
+, order_takeout             AS (
+    SELECT order_no
+          , order_dt
+    FROM `ygy-datawarehouse.edw.lst_order`
+    WHERE 1=1
+          AND DATE(order_dt) BETWEEN '2021-01-01' AND '2022-12-31'
+          AND test_order_yn is false
+          AND order_result_cd ='success'
+          AND order_type_cd = 'TAKEOUT'
+)
+
+SELECT FORMAT_DATETIME('%Y_%m', order_dt)                               AS year_month
+      , ROUND(SUM(whether_liquor) / COUNT(DISTINCT order_no) * 100,2)   AS liquor_order_percent
+FROM order_takeout
+LEFT JOIN (
+  SELECT order_no
+        , product_section_id
+        , whether_liquor
+  FROM order_drink
+  LEFT JOIN product_drink
+  USING (product_section_id)
+)
+USING (order_no)
+GROUP BY 1
+ORDER BY 1;
